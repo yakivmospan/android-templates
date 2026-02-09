@@ -21,4 +21,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "Two Layers"
 include(":app")
- 
