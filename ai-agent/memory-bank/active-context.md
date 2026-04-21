@@ -1,27 +1,30 @@
 # Active Context
 
 **Current focus:**
-Initial implementation of the `autocomplete` library module — defining the domain model, data source interface, Ktor-based GitHub implementation, and the Compose `AutoCompleteComponent`.
+Phase 4 — Presentation layer: `AutoCompleteViewModel<T>`.
 
 **Recent decisions:**
 - Library module (`autocomplete`) is completely self-contained; the `app` module only integrates it as a dependency.
-- `AutoCompleteDataSource` interface is the main extension point — allows swapping GitHub API for any other source.
-- Minimum 3 characters before triggering a search (debounce to be applied inside the component).
-- Results are merged from users + repositories, sorted alphabetically, capped at 50.
+- All core types are generic `<T>`: `AutoCompleteDataSource<T>`, `AutoCompleteViewModel<T>`, `AutoCompleteState<T>`, `AutoCompleteComponent<T>`. The library imposes no item model on callers.
+- `AutoCompleteComponent<T>` is fully generic with no callbacks — click handling is the caller's responsibility via `Modifier.clickable` inside `itemContent`.
+- `GitHubAutoCompleteComponent` is the opinionated default wrapper: bundles `GitHubItemRow` as `itemContent` and exposes `onItemSelected: (GitHubItem) -> Unit`.
+- No GitHub API token — unauthenticated requests only.
+- Minimum 3 characters before triggering a search (debounce 300 ms inside ViewModel).
+- Results are paginated. `AutoCompleteDataSource<T>` interface takes `page: Int` (1-based); empty result signals end of data. `pageSize` is a constructor param on `GitHubAutoCompleteDataSource` (default 50), not part of the interface.
+- `AutoCompleteState.Success<T>` carries `isLoadingMore` (bottom spinner) and `hasMore` (gates further page loads).
+- `AutoCompleteViewModel` resets to page 1 on query change; exposes `loadMore()` to append next page.
+- `AutoCompleteComponent` calls `viewModel.loadMore()` when the last list item becomes visible.
 - Ktor chosen for networking (KMP-ready for future migration).
 - Mockk chosen for mocking in unit tests.
 
-**Open questions:**
-- Should `AutoCompleteItem` be a sealed class with `User` / `Repository` subtypes, or a flat data class with a `type` field?
-- Authentication for GitHub API? (Public API has rate limiting; a token header may be needed.)
-- Should the component expose a callback when an item is selected?
+**Open questions:** none.
 
 **Next steps (phased):**
 - Phase 1 — Dependency setup: Ktor, coroutines, serialization, lifecycle-viewmodel, mockk in `libs.versions.toml` + `autocomplete/build.gradle.kts`.
-- Phase 2 — Domain: `AutoCompleteItem` (sealed: User/Repository) + `AutoCompleteState` (Idle/Loading/Success/Error).
-- Phase 3 — Data: `AutoCompleteDataSource` interface + `GitHubAutoCompleteDataSource` (Ktor, concurrent, merge, sort, limit 50).
-- Phase 4 — Presentation: `AutoCompleteViewModel` (StateFlow, debounce 300 ms, flatMapLatest, min 3 chars).
-- Phase 5 — UI: full `AutoCompleteComponent` (text field, loading, list, empty state, error state).
+- Phase 2 — Domain: `AutoCompleteDataSource<T>` interface (`search(query, page)`) + `AutoCompleteState<T>` (`Idle/Loading/Success(items, isLoadingMore, hasMore)/Error`).
+- Phase 3 — Data: `GitHubItem` model + `GitHubAutoCompleteDataSource` (Ktor, concurrent, page + pageSize params, merge, sort).
+- Phase 4 — Presentation: `AutoCompleteViewModel` (StateFlow, debounce 300 ms, flatMapLatest, min 3 chars, page reset on query change, `loadMore()` appends next page).
+- Phase 5 — UI: `AutoCompleteComponent<T>` (text field, loading, paginated list with bottom spinner on `isLoadingMore`, empty state, error state) + `GitHubAutoCompleteComponent` (default GitHub UI with `onItemSelected`).
 - Phase 6 — Integration: wire `GitHubAutoCompleteDataSource` + ViewModel into `MainActivity`; add INTERNET permission.
 - Phase 7 — Unit tests: `AutoCompleteViewModelTest` (Mockk + TestDispatcher), `GitHubAutoCompleteDataSourceTest` (MockEngine).
 - Phase 8 — UI tests: `AutoCompleteComponentTest` (Compose UI Test, one test per state).

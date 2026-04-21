@@ -8,14 +8,15 @@
 - Placeholder `AutoCompleteComponent` composable (renders a static title string).
 - README with plan, tech stack, and architecture notes.
 - Memory bank initialized.
+- Phase 1: Ktor, coroutines, serialization, lifecycle-viewmodel, mockk dependencies added to `libs.versions.toml` + `autocomplete/build.gradle.kts`.
 
 **In progress:**
 - (nothing active yet)
 
 **Pending:**
-- [ ] Phase 1: Add Ktor, coroutines, serialization, lifecycle-viewmodel, mockk dependencies.
-- [ ] Phase 2: `AutoCompleteItem` + `AutoCompleteState` domain classes.
-- [ ] Phase 3: `AutoCompleteDataSource` interface + `GitHubAutoCompleteDataSource` (Ktor).
+- [x] Phase 1: Add Ktor, coroutines, serialization, lifecycle-viewmodel, mockk dependencies.
+- [x] Phase 2: `AutoCompleteDataSource<T>` interface + `AutoCompleteState<T>` domain classes.
+- [x] Phase 3: `GitHubItem` model + `GitHubAutoCompleteDataSource` (Ktor).
 - [ ] Phase 4: `AutoCompleteViewModel` with StateFlow, debounce, flatMapLatest.
 - [ ] Phase 5: Full `AutoCompleteComponent` Compose UI (all states).
 - [ ] Phase 6: App module integration + INTERNET permission.
