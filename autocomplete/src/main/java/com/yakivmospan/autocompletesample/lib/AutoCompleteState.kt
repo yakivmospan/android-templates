@@ -5,7 +5,7 @@ package com.yakivmospan.autocompletesample.lib
  *
  * @param T the type of item displayed in the results list.
  */
-internal sealed class AutoCompleteState<out T> {
+sealed class AutoCompleteState<out T> {
 
     /** No query entered yet — component is idle. */
     data object Idle : AutoCompleteState<Nothing>()

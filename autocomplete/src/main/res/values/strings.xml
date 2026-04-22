@@ -1,3 +1,11 @@
 <resources>
     <string name="autocomplete_title">Search</string>
+    <string name="autocomplete_hint">Type at least 3 characters…</string>
+    <string name="autocomplete_empty">No results found</string>
+    <string name="autocomplete_error">Something went wrong: %1$s</string>
+    <string name="autocomplete_loading_more">Loading more…</string>
+    <string name="autocomplete_clear">Clear search</string>
+    <string name="autocomplete_item_type_user">User</string>
+    <string name="autocomplete_item_type_repository">Repository</string>
+    <string name="autocomplete_avatar_description">%1$s avatar</string>
 </resources>

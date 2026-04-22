@@ -3,6 +3,7 @@ package com.yakivmospan.autocompletesample.lib
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.yakivmospan.autocompletesample.lib.AutoCompleteState.Idle
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 
 private const val DEFAULT_MIN_QUERY_LENGTH = 3
 private const val DEFAULT_DEBOUNCE_MILLIS = 300L
@@ -37,12 +39,12 @@ class AutoCompleteViewModel<T>(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow<AutoCompleteState<T>>(AutoCompleteState.Idle)
-    internal val state = _state.asStateFlow()
+    private val _state = MutableStateFlow<AutoCompleteState<T>>(Idle)
+    val state = _state.asStateFlow()
 
     // Query state — StateFlow so current value is always accessible (e.g. for loadMore).
     private val queryFlow = MutableStateFlow("")
-    internal val query = queryFlow.asStateFlow()
+    val query = queryFlow.asStateFlow()
 
     // Current pagination page; reset to 1 on every new query.
     private var currentPage = 1
@@ -65,7 +67,7 @@ class AutoCompleteViewModel<T>(
         resetCurrentPage()
 
         if (query.length < minQueryLength) {
-            _state.value = AutoCompleteState.Idle
+            _state.value = Idle
         } else {
             _state.value = AutoCompleteState.Loading
             _state.value = fetchPage(query, page = 1, existing = emptyList())
@@ -115,7 +117,7 @@ class AutoCompleteViewModel<T>(
     private fun handleClearEvent() {
         cancelLoadMore()
         queryFlow.value = ""
-        _state.value = AutoCompleteState.Idle
+        _state.value = Idle
         resetCurrentPage()
     }
 
@@ -138,6 +140,7 @@ class AutoCompleteViewModel<T>(
         runCatching {
             val newItems = dataSource.search(query, page)
             val combined = existing + newItems
+
             if (combined.isEmpty()) {
                 AutoCompleteState.Empty
             } else {
@@ -148,6 +151,7 @@ class AutoCompleteViewModel<T>(
                 )
             }
         }.getOrElse { error ->
+            if (error is CancellationException) throw error
             AutoCompleteState.Error(error.message ?: "Unknown error")
         }
     }

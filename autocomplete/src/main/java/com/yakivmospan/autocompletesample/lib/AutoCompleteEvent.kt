@@ -3,7 +3,7 @@ package com.yakivmospan.autocompletesample.lib
 /**
  * All UI interactions with [AutoCompleteViewModel] expressed as a sealed type.
  */
-internal sealed interface AutoCompleteEvent {
+sealed interface AutoCompleteEvent {
 
     /** Fired on every keystroke in the search field. */
     data class QueryChanged(val query: String) : AutoCompleteEvent
