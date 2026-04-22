@@ -17,7 +17,7 @@
 - [x] Phase 1: Add Ktor, coroutines, serialization, lifecycle-viewmodel, mockk dependencies.
 - [x] Phase 2: `AutoCompleteDataSource<T>` interface + `AutoCompleteState<T>` domain classes.
 - [x] Phase 3: `GitHubItem` model + `GitHubAutoCompleteDataSource` (Ktor).
-- [ ] Phase 4: `AutoCompleteViewModel` with StateFlow, debounce, flatMapLatest.
+- [x] Phase 4: `AutoCompleteViewModel` with StateFlow, debounce, flatMapLatest, loadMore().
 - [ ] Phase 5: Full `AutoCompleteComponent` Compose UI (all states).
 - [ ] Phase 6: App module integration + INTERNET permission.
 - [ ] Phase 7: Unit tests (ViewModel + DataSource).

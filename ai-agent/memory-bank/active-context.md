@@ -1,7 +1,7 @@
 # Active Context
 
 **Current focus:**
-Phase 4 — Presentation layer: `AutoCompleteViewModel<T>`.
+Phase 5 — UI layer: `AutoCompleteComponent<T>` + `GitHubAutoCompleteComponent`.
 
 **Recent decisions:**
 - Library module (`autocomplete`) is completely self-contained; the `app` module only integrates it as a dependency.

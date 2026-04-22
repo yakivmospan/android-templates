@@ -13,6 +13,9 @@ internal sealed class AutoCompleteState<out T> {
     /** Initial search in progress (first page, no results shown yet). */
     data object Loading : AutoCompleteState<Nothing>()
 
+    /** Search completed but returned no results. */
+    data object Empty : AutoCompleteState<Nothing>()
+
     /**
      * Results are available.
      *
@@ -27,7 +30,7 @@ internal sealed class AutoCompleteState<out T> {
     ) : AutoCompleteState<T>()
 
     /**
-     * A search failed.
+     * Initial search failed.
      *
      * @property message human-readable error description.
      */
