@@ -1,7 +1,7 @@
 # Active Context
 
 **Current focus:**
-Phase 7 complete — all unit tests implemented and passing. Phase 8 next: UI instrumented tests.
+Phase 8 complete — all UI instrumented tests implemented and passing.
 
 **Recent decisions:**
 - Library module (`autocomplete`) is completely self-contained; the `app` module only integrates it as a dependency.
@@ -21,7 +21,18 @@ Phase 7 complete — all unit tests implemented and passing. Phase 8 next: UI in
 - `AutoCompleteViewModelTest`: `StandardTestDispatcher` shared between `testScope`, `viewModelScope` (via `Dispatchers.setMain`), and `ioDispatcher`. `sendQuery` helper calls `advanceUntilIdle()` before emitting the query to ensure `subscribeToQueryChanges()` has started (avoiding `drop(1)` eating the query). Per-query `coEvery` stubs used when call-count ordering is not deterministic (e.g. loadMore + query change race). All assertions use exact state equality — no `any {}` predicates.
 - `GitHubAutoCompleteDataSourceTest`: `MockEngine`-backed `buildDataSource` helper; URL-capture pattern for param assertions; 500 + empty body triggers serialization failure, which is the "both fail" path.
 
+**UI test patterns established:**
+- Always test the ViewModel-connected overload: `AutoCompleteComponent(viewModel = mockVm, ...)` and `GitHubAutoCompleteComponent(viewModel = mockVm, ...)`.
+- `TAG_AUTOCOMPLETE_STATELESS` (internal) on root `Column` of stateless `AutoCompleteComponent`. Every test asserts this tag is displayed — proves delegation from ViewModel-connected overload to stateless overload.
+- `TAG_LOADING_INDICATOR` (internal) on `CircularProgressIndicator` in `LoadingContent`. Used to assert spinner presence/absence.
+- `GitHubAutoCompleteComponent` tests assert `TAG_AUTOCOMPLETE_STATELESS` inherited from inner `AutoCompleteComponent` — no separate tag needed.
+- `mockk-android` added to `androidTestImplementation`. `packaging` block excludes JUnit Jupiter `META-INF/LICENSE.md` conflict brought in transitively.
+- `mockk(relaxed = true)` for `AutoCompleteViewModel<T>`; `state`/`query` stubbed via `MutableStateFlow`. `createComposeRule()` (JUnit4). `launchComponent()` helper stubs ViewModel and calls `setContent`.
+- Backtick test names with spaces are **not** allowed in Android instrumented tests (ART VM restriction). Use `snake_case`: `when_X_then_Y`.
+- Every part of the test name must have a corresponding assertion — e.g. "no spinner or message" requires both `TAG_LOADING_INDICATOR.assertDoesNotExist()` and `onNodeWithText(...).assertDoesNotExist()`.
+- `assertDoesNotExist()` is a method on `SemanticsNodeInteraction` — no import needed.
+- Interaction tests for `GitHubAutoCompleteComponent` use a lambda capture (`mutableListOf`) rather than mockk `verify`, since `onItemSelected` is a plain callback, not a ViewModel event.
+
 **Open questions:** none.
 
-**Next steps (phased):**
-- Phase 8 — UI tests: `AutoCompleteComponentTest` (Compose UI Test, one test per state).
+**Next steps:** Project complete — all unit tests (Phase 7) and UI instrumented tests (Phase 8) implemented.

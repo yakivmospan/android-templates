@@ -36,9 +36,16 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+
+/** Test tag applied to the root of the stateless [AutoCompleteComponent] overload. */
+internal const val TAG_AUTOCOMPLETE_STATELESS = "autocomplete_stateless"
+
+/** Test tag applied to the initial loading [CircularProgressIndicator] in [LoadingContent]. */
+internal const val TAG_LOADING_INDICATOR = "autocomplete_loading_indicator"
 
 /**
  * Factory / entry point — convenience for the common case
@@ -87,7 +94,7 @@ fun <T> AutoCompleteComponent(
     itemContent: @Composable (T) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth().testTag(TAG_AUTOCOMPLETE_STATELESS)) {
         SearchField(query = query, onEvent = onEvent)
         Spacer(modifier = Modifier.height(4.dp))
         when (state) {
@@ -156,7 +163,7 @@ private fun LoadingContent(modifier: Modifier = Modifier) {
             .semantics { liveRegion = LiveRegionMode.Polite },
         contentAlignment = Alignment.Center,
     ) {
-        CircularProgressIndicator()
+        CircularProgressIndicator(modifier = Modifier.testTag(TAG_LOADING_INDICATOR))
     }
 }
 
