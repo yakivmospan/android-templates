@@ -1,10 +1,12 @@
 package com.yakivmospan.autocompletesample.lib
 
+import android.util.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
@@ -66,38 +68,44 @@ class GitHubAutoCompleteDataSource(
         val usersDeferred = async { fetchUsers(query, page) }
         val reposDeferred = async { fetchRepositories(query, page) }
 
-        val users = usersDeferred.await()
-        val repos = reposDeferred.await()
+        val usersResult = usersDeferred.await()
+        val reposResult = reposDeferred.await()
+
+        // Checking overall general errors, including parsing. In a real app error handling should be based on http code handling and api error parsing.
+        if (usersResult.isFailure && reposResult.isFailure) {
+            throw Exception("Unable to reach data.", usersResult.exceptionOrNull())
+        }
+
+        val users = usersResult.getOrDefault(emptyList())
+        val repos = reposResult.getOrDefault(emptyList())
 
         (users + repos)
             .sortedBy { it.name.lowercase() }
     }
 
-    private suspend fun fetchUsers(query: String, page: Int): List<GitHubItem.User> =
-        httpClient.get("https://api.github.com/search/users") {
-            parameter("q", query)
-            parameter("page", page)
-            parameter("per_page", pageSize)
-        }.body<GitHubUserSearchResponse>().items.map { dto ->
-            GitHubItem.User(
-                id = dto.id,
-                login = dto.login,
-                avatarUrl = dto.avatarUrl,
-            )
-        }
+    private suspend fun fetchUsers(query: String, page: Int): Result<List<GitHubItem.User>> =
+        runCatching {
+            val response = httpClient.get("https://api.github.com/search/users") {
+                parameter("q", query)
+                parameter("page", page)
+                parameter("per_page", pageSize)
+            }
+            response.body<GitHubUserSearchResponse>().items.map { dto ->
+                GitHubItem.User(id = dto.id, login = dto.login, avatarUrl = dto.avatarUrl)
+            }
+        }.reThrowCancellation()
 
-    private suspend fun fetchRepositories(query: String, page: Int): List<GitHubItem.Repository> =
-        httpClient.get("https://api.github.com/search/repositories") {
-            parameter("q", query)
-            parameter("page", page)
-            parameter("per_page", pageSize)
-        }.body<GitHubRepoSearchResponse>().items.map { dto ->
-            GitHubItem.Repository(
-                id = dto.id,
-                fullName = dto.fullName,
-                avatarUrl = dto.owner?.avatarUrl,
-            )
-        }
+    private suspend fun fetchRepositories(query: String, page: Int): Result<List<GitHubItem.Repository>> =
+        runCatching {
+            val response = httpClient.get("https://api.github.com/search/repositories") {
+                parameter("q", query)
+                parameter("page", page)
+                parameter("per_page", pageSize)
+            }
+            response.body<GitHubRepoSearchResponse>().items.map { dto ->
+                GitHubItem.Repository(id = dto.id, fullName = dto.fullName, avatarUrl = dto.owner?.avatarUrl)
+            }
+        }.reThrowCancellation()
 }
 
 // ── Default client factory ─────────────────────────────────────────────────────
@@ -110,6 +118,11 @@ private fun defaultHttpClient() = HttpClient(Android) {
         })
     }
     install(Logging) {
+        logger = object : Logger {
+            override fun log(message: String) {
+                Log.i("Ktor", message)
+            }
+        }
         level = LogLevel.BODY
     }
 }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
@@ -25,9 +26,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -112,6 +113,7 @@ private fun SearchField(
     modifier: Modifier = Modifier,
 ) {
     val clearDescription = stringResource(R.string.autocomplete_clear)
+    val keyboardController = LocalSoftwareKeyboardController.current
     OutlinedTextField(
         value = query,
         onValueChange = { onEvent(AutoCompleteEvent.QueryChanged(it)) },
@@ -120,6 +122,12 @@ private fun SearchField(
         label = { Text(stringResource(R.string.autocomplete_title)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(
+            onSearch = {
+                keyboardController?.hide()
+                onEvent(AutoCompleteEvent.Search)
+            }
+        ),
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(onClick = { onEvent(AutoCompleteEvent.Clear) }) {
@@ -212,9 +220,8 @@ private fun <T> SuccessContent(
         }
     }
 
-    LaunchedEffect(Unit) {
-        snapshotFlow { shouldLoadMore }
-            .collect { if (it) onEvent(AutoCompleteEvent.LoadMore) }
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) onEvent(AutoCompleteEvent.LoadMore)
     }
 
     val loadingMoreLabel = stringResource(R.string.autocomplete_loading_more)

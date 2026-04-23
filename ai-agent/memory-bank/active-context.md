@@ -1,7 +1,7 @@
 # Active Context
 
 **Current focus:**
-Phase 5 — UI layer: `AutoCompleteComponent<T>` + `GitHubAutoCompleteComponent`.
+Phase 7 — Unit tests: `AutoCompleteViewModelTest` (Mockk + TestDispatcher), `GitHubAutoCompleteDataSourceTest` (MockEngine).
 
 **Recent decisions:**
 - Library module (`autocomplete`) is completely self-contained; the `app` module only integrates it as a dependency.

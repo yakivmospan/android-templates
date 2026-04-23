@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.coroutines.cancellation.CancellationException
 
 private const val DEFAULT_MIN_QUERY_LENGTH = 3
 private const val DEFAULT_DEBOUNCE_MILLIS = 300L
@@ -87,7 +86,12 @@ class AutoCompleteViewModel<T>(
             is AutoCompleteEvent.QueryChanged -> handleQueryChangedEvent(event.query)
             is AutoCompleteEvent.LoadMore -> handleLoadMoreEvent()
             is AutoCompleteEvent.Clear -> handleClearEvent()
+            is AutoCompleteEvent.Search -> handleSearchEvent()
         }
+    }
+
+    private fun handleSearchEvent() {
+        viewModelScope.launch { onQueryChange(queryFlow.value) }
     }
 
     private fun handleQueryChangedEvent(query: String) {
@@ -150,8 +154,7 @@ class AutoCompleteViewModel<T>(
                     hasMore = newItems.isNotEmpty(),
                 )
             }
-        }.getOrElse { error ->
-            if (error is CancellationException) throw error
+        }.reThrowCancellation().getOrElse { error ->
             AutoCompleteState.Error(error.message ?: "Unknown error")
         }
     }

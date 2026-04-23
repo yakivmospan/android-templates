@@ -18,8 +18,8 @@
 - [x] Phase 2: `AutoCompleteDataSource<T>` interface + `AutoCompleteState<T>` domain classes.
 - [x] Phase 3: `GitHubItem` model + `GitHubAutoCompleteDataSource` (Ktor).
 - [x] Phase 4: `AutoCompleteViewModel` with StateFlow, debounce, flatMapLatest, loadMore().
-- [ ] Phase 5: Full `AutoCompleteComponent` Compose UI (all states).
-- [ ] Phase 6: App module integration + INTERNET permission.
+- [x] Phase 5: Full `AutoCompleteComponent` Compose UI (all states).
+- [x] Phase 6: App module integration + INTERNET permission.
 - [ ] Phase 7: Unit tests (ViewModel + DataSource).
 - [ ] Phase 8: UI instrumented tests (all four states).
 
