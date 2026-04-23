@@ -1,5 +1,7 @@
 # Auto complete Android Sample
 
+![showcase.gif](showcase.gif)
+
 A reusable native Android autocomplete component/library that fetches matching GitHub users and repositories for a given query
 string, demonstrating clean architecture, separation of concerns, and testability.
 This is a Kotlin based Android project targeting Android with min 24 API.
