@@ -1,6 +1,6 @@
 # Auto complete Android Sample
 
-![showcase.gif](showcase.gif)
+<img src="showcase.gif" alt="showcase" width="400"/>
 
 A reusable native Android autocomplete component/library that fetches matching GitHub users and repositories for a given query
 string, demonstrating clean architecture, separation of concerns, and testability.
