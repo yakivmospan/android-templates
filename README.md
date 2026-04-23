@@ -54,6 +54,7 @@ So our library must:
 - Checking overall general errors, including parsing. In a real app error handling should be based on http code handling and api error parsing.
 - Pagination is done purely. In real app data source should return Paginated data object with size, total count and next page
   info. In this sample we just fetch next page when user scrolls to the end of the list.
+- Pagination has no error handling. At the moment we just show previous results. In real app we should show a message below previous loaded results with a retry button.
 - Github Data source is just sorting new pages data and adds it to the end of existing list.
   So firt page result is sorted A-Z, and then next page sorted A-Z is started after last page Z items. With current UX where user
   scrolls to the end of the list and fetches next page, this looks bad. In real app we may want to change UI of autocomplete to

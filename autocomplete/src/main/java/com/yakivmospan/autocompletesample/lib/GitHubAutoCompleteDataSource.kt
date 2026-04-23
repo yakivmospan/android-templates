@@ -61,7 +61,7 @@ private data class GitHubOwnerDto(
  */
 class GitHubAutoCompleteDataSource(
     private val httpClient: HttpClient = defaultHttpClient(),
-    private val pageSize: Int = 50,
+    private val pageSize: Int = 25,
 ) : AutoCompleteDataSource<GitHubItem> {
 
     override suspend fun search(query: String, page: Int): List<GitHubItem> = coroutineScope {

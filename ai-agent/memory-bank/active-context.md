@@ -1,7 +1,7 @@
 # Active Context
 
 **Current focus:**
-Phase 7 — Unit tests: `AutoCompleteViewModelTest` (Mockk + TestDispatcher), `GitHubAutoCompleteDataSourceTest` (MockEngine).
+Phase 7 complete — all unit tests implemented and passing. Phase 8 next: UI instrumented tests.
 
 **Recent decisions:**
 - Library module (`autocomplete`) is completely self-contained; the `app` module only integrates it as a dependency.
@@ -17,14 +17,11 @@ Phase 7 — Unit tests: `AutoCompleteViewModelTest` (Mockk + TestDispatcher), `G
 - Ktor chosen for networking (KMP-ready for future migration).
 - Mockk chosen for mocking in unit tests.
 
+**Unit test patterns established:**
+- `AutoCompleteViewModelTest`: `StandardTestDispatcher` shared between `testScope`, `viewModelScope` (via `Dispatchers.setMain`), and `ioDispatcher`. `sendQuery` helper calls `advanceUntilIdle()` before emitting the query to ensure `subscribeToQueryChanges()` has started (avoiding `drop(1)` eating the query). Per-query `coEvery` stubs used when call-count ordering is not deterministic (e.g. loadMore + query change race). All assertions use exact state equality — no `any {}` predicates.
+- `GitHubAutoCompleteDataSourceTest`: `MockEngine`-backed `buildDataSource` helper; URL-capture pattern for param assertions; 500 + empty body triggers serialization failure, which is the "both fail" path.
+
 **Open questions:** none.
 
 **Next steps (phased):**
-- Phase 1 — Dependency setup: Ktor, coroutines, serialization, lifecycle-viewmodel, mockk in `libs.versions.toml` + `autocomplete/build.gradle.kts`.
-- Phase 2 — Domain: `AutoCompleteDataSource<T>` interface (`search(query, page)`) + `AutoCompleteState<T>` (`Idle/Loading/Success(items, isLoadingMore, hasMore)/Error`).
-- Phase 3 — Data: `GitHubItem` model + `GitHubAutoCompleteDataSource` (Ktor, concurrent, page + pageSize params, merge, sort).
-- Phase 4 — Presentation: `AutoCompleteViewModel` (StateFlow, debounce 300 ms, flatMapLatest, min 3 chars, page reset on query change, `loadMore()` appends next page).
-- Phase 5 — UI: `AutoCompleteComponent<T>` (text field, loading, paginated list with bottom spinner on `isLoadingMore`, empty state, error state) + `GitHubAutoCompleteComponent` (default GitHub UI with `onItemSelected`).
-- Phase 6 — Integration: wire `GitHubAutoCompleteDataSource` + ViewModel into `MainActivity`; add INTERNET permission.
-- Phase 7 — Unit tests: `AutoCompleteViewModelTest` (Mockk + TestDispatcher), `GitHubAutoCompleteDataSourceTest` (MockEngine).
 - Phase 8 — UI tests: `AutoCompleteComponentTest` (Compose UI Test, one test per state).
