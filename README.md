@@ -11,7 +11,7 @@ This is a Kotlin based Android project targeting Android with min 24 API.
 ### Build Application
 
 To build and run the development version of the Sample Android app, use the run configuration from the run widget
-in your IDE’s toolbar or build it directly from the terminal:
+in your IDE's toolbar or build it directly from the terminal:
 
 - on macOS/Linux
   ```shell
@@ -48,6 +48,237 @@ So our library must:
 - Provide possibility to change the data source (e.g., switch from GitHub API to another API) without affecting the UI layer,
   adhering to the principles of separation of concerns and modularity.
 - Follow Dependency Inversion Principle to be easily testable and maintainable.
+
+### Layer diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         UI Layer                                │
+│                                                                 │
+│  GitHubAutoCompleteComponent          AutoCompleteComponent<T>  │
+│  ┌─────────────────────────┐          ┌──────────────────────┐  │
+│  │ Built-in GitHubItemRow  │          │ itemContent slot     │  │
+│  │ onItemSelected callback │─────────▶│ (caller-provided)    │  │
+│  └─────────────────────────┘          └──────────────────────┘  │
+│                  │                              │                │
+│                  └──────────────┬───────────────┘                │
+│                                 │ observes state / sends events  │
+├─────────────────────────────────┼───────────────────────────────┤
+│                   Presentation Layer                            │
+│                                 ▼                               │
+│              AutoCompleteViewModel<T>                           │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  StateFlow<AutoCompleteState<T>>                         │   │
+│  │  ┌──────┐ ┌─────────┐ ┌───────┐ ┌─────────┐ ┌───────┐  │   │
+│  │  │ Idle │ │ Loading │ │ Empty │ │ Success │ │ Error │  │   │
+│  │  └──────┘ └─────────┘ └───────┘ └─────────┘ └───────┘  │   │
+│  │                                                          │   │
+│  │  Events: QueryChanged · Search · LoadMore · Clear        │   │
+│  │  • debounce (300 ms) + distinctUntilChanged              │   │
+│  │  • flatMapLatest — cancels previous in-flight search     │   │
+│  │  • pagination — page tracked internally, reset on query  │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                 │ suspend search(query, page)   │
+├─────────────────────────────────┼───────────────────────────────┤
+│                      Domain Layer                               │
+│                                 ▼                               │
+│              AutoCompleteDataSource<T>  ◀── interface           │
+│                                 │                               │
+├─────────────────────────────────┼───────────────────────────────┤
+│                       Data Layer                                │
+│                                 ▼                               │
+│         GitHubAutoCompleteDataSource : AutoCompleteDataSource<GitHubItem>
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  Ktor HttpClient                                         │   │
+│  │  GET /search/users  ──┐                                  │   │
+│  │                       ├─ coroutineScope async/await      │   │
+│  │  GET /search/repos ───┘  merge + sort alphabetically     │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Component relationships
+
+```
+AutoCompleteDataSource<T>          (domain interface — data layer boundary)
+        ▲
+        │ implements
+GitHubAutoCompleteDataSource       (Ktor-based, searches users + repos concurrently)
+        │
+        │ injected into
+AutoCompleteViewModel<T>           (state machine: debounce, pagination, cancellation)
+        │
+        │ observed by
+AutoCompleteComponent<T>           (generic Compose UI — itemContent slot for rows)
+        │
+        │ wrapped by
+GitHubAutoCompleteComponent        (opinionated UI: GitHubItemRow + onItemSelected)
+```
+
+### State model
+
+```
+AutoCompleteState<T>
+├── Idle          — field is empty / query too short (< 3 chars)
+├── Loading       — first page in flight
+├── Empty         — search returned no results
+├── Success(items, isLoadingMore, hasMore)
+│       isLoadingMore = true  → bottom spinner visible
+│       hasMore      = false  → no further loadMore() calls
+└── Error(message) — network or parse failure
+```
+
+---
+
+## Examples
+
+### 1 — GitHub autocomplete (simplest usage)
+
+Use `rememberGitHubAutoCompleteViewModel()` to get a scoped ViewModel with a default
+`GitHubAutoCompleteDataSource` and a default Ktor `HttpClient` wired automatically.
+
+```kotlin
+@Composable
+fun MyScreen() {
+    val viewModel = rememberGitHubAutoCompleteViewModel()
+
+    GitHubAutoCompleteComponent(
+        viewModel = viewModel,
+        onItemSelected = { item ->
+            when (item) {
+                is GitHubItem.User       -> println("User: ${item.login}")
+                is GitHubItem.Repository -> println("Repo: ${item.fullName}")
+            }
+        },
+    )
+}
+```
+
+---
+
+### 2 — GitHub autocomplete with a custom HTTP client
+
+Supply your own `HttpClient` to add auth headers, timeouts, or a mock engine.
+
+```kotlin
+@Composable
+fun MyScreen() {
+    // Build once — remember so it survives recomposition.
+    val httpClient = remember {
+        HttpClient(Android) {
+            install(ContentNegotiation) { json() }
+            defaultRequest {
+                header("Authorization", "Bearer $GITHUB_TOKEN")
+            }
+        }
+    }
+
+    val dataSource = remember(httpClient) {
+        GitHubAutoCompleteDataSource(
+            httpClient = httpClient,
+            pageSize   = 30,
+        )
+    }
+
+    val viewModel: AutoCompleteViewModel<GitHubItem> = viewModel(
+        factory = AutoCompleteViewModel.Factory(dataSource)
+    )
+
+    GitHubAutoCompleteComponent(
+        viewModel      = viewModel,
+        onItemSelected = { item -> /* handle selection */ },
+    )
+}
+```
+
+---
+
+### 3 — Generic autocomplete with a custom data source
+
+Implement `AutoCompleteDataSource<T>` for any backend and plug it into the generic
+`AutoCompleteComponent<T>` with your own item row UI.
+
+```kotlin
+// 1. Your domain model
+data class Country(val code: String, val name: String)
+
+// 2. Your data source
+class CountryDataSource : AutoCompleteDataSource<Country> {
+    override suspend fun search(query: String, page: Int): List<Country> {
+        // call your API / query Room / filter an in-memory list …
+        return CountryApi.search(query, page)
+    }
+}
+
+// 3. Wire it up in a composable
+@Composable
+fun CountryPickerScreen() {
+    val viewModel: AutoCompleteViewModel<Country> = rememberAutoCompleteViewModel(
+        dataSource = remember { CountryDataSource() }
+    )
+
+    AutoCompleteComponent(
+        viewModel   = viewModel,
+        itemContent = { country ->
+            Text(
+                text     = "${country.code}  ${country.name}",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { /* handle selection */ }
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+            )
+        },
+    )
+}
+```
+
+---
+
+### 4 — Stateless / preview-friendly overload
+
+Both components expose a fully stateless overload that accepts plain values and an
+`onEvent` lambda — ideal for Compose Previews and UI tests.
+
+```kotlin
+// Compose Preview
+@Preview
+@Composable
+fun AutoCompleteSuccessPreview() {
+    AutoCompleteComponent(
+        query     = "kotlin",
+        state     = AutoCompleteState.Success(
+            items        = listOf("kotlin/kotlin", "kotlinx/coroutines"),
+            hasMore      = true,
+            isLoadingMore = false,
+        ),
+        onEvent   = {},
+        itemContent = { item: String ->
+            Text(
+                text     = item,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            )
+        },
+    )
+}
+```
+
+---
+
+### 5 — ViewModel with custom debounce / min-query-length
+
+```kotlin
+val viewModel: AutoCompleteViewModel<GitHubItem> = viewModel(
+    factory = AutoCompleteViewModel.Factory(
+        dataSource     = GitHubAutoCompleteDataSource(),
+        minQueryLength = 2,      // start searching after 2 chars instead of 3
+        debounceMillis = 500L,   // wait 500 ms before firing
+    )
+)
+```
+
+---
 
 ## Tradeoffs:
 
